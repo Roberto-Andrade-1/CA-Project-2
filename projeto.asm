@@ -1,35 +1,63 @@
-; Constantes
-Comprar EQU 1
-UsarCartao EQU 2
-Stock EQU 3
+;----------------------------------------------------------------
+;                        Periferico de entrada
+;----------------------------------------------------------------
 
-Continuar EQU 1
-Cancelar EQU 5
+ON_OFF          EQU 0030H ; Onde o utilizador ira ligar a maquina
+OK              EQU 0040H ; Onde o utilizador ira selecionar o OK
+Opcao           EQU 0050H ; Onde o utilizador ira escolher a opcao
+Dinheiro        EQU 0060H ; Onde o utilizador ira introduzir as moedas/notas
 
-Recarregar EQU 2
+;----------------------------------------------------------------
+;      Labels para quem usar saber onde inserir os valores
+;----------------------------------------------------------------
 
-Seguinte EQU 1
+Place 0038H
+String "ON_OFF" 
+Place 0048H
+String "OK"
+Place 0058H
+String "Opcao"
+Place 0068H
+String "Dinheiro"
 
-Porto EQU 1
-Lisboa EQU 2
-Faro EQU 3
-Braga EQU 4
+;----------------------------------------------------------------
+;                          Periferico de saida
+;----------------------------------------------------------------
 
-CustoPorto EQU 150
-CustoLisboa EQU 250
-CustoFaro EQU 350
-CustoBraga EQU 450
+InicioEcra      EQU 0090H
+FimEcra         EQU 00FFH
 
+;----------------------------------------------------------------
+;                               Constantes
+;----------------------------------------------------------------
+CaracterVazio   EQU 20H
 
+Comprar         EQU 1
+UsarCartao      EQU 2
+Stock           EQU 3
 
-; Periférico de entrada
-PER_EN EQU 0070H ; Onde o utilizador irá selecionar a sua opção
+Continuar       EQU 1
+Cancelar        EQU 5
 
-; Periférico de saida
-InicioEcra EQU 0090H
-FimEcra EQU 00FFH
+Recarregar      EQU 2
 
-; Menus de informação
+Seguinte        EQU 1
+
+Porto           EQU 1
+Lisboa          EQU 2
+Faro            EQU 3
+Braga           EQU 4
+
+CustoPorto      EQU 150
+CustoLisboa     EQU 250
+CustoFaro       EQU 350
+CustoBraga      EQU 450
+
+stackPointer    EQU 0000H
+
+;-----------------------------------------------------------------
+;                         Menus de informacao
+;-----------------------------------------------------------------
 
 Place 01D0H
 MenuPrincipal:
@@ -44,10 +72,10 @@ MenuPrincipal:
 Place 0250H
 MenuCompra:
     String "  Menu Estacao  "
-    String "1-Porto: 1.50"
-    String "2-Lisboa: 2.50"
-    String "3-Faro: 3.50"
-    String "4-Braga: 4.50"
+    String "1-Porto:  1.50  "
+    String "2-Lisboa: 2.50  "
+    String "3-Faro:   3.50  "
+    String "4-Braga:  4.50  "
     String "                "
     String "5-Cancelar      "
 
@@ -129,7 +157,7 @@ EcraErro:
     String "    UMA OPCAO   "
     String "     VALIDA     "
     String "                "
-    String "----- ERRO -----"
+    String "OK pra continuar"
 
 Place 06D0H
 PasseErro:
@@ -140,3 +168,199 @@ PasseErro:
     String "     ERRADO     "
     String "                "
     String "----- ERRO -----"
+
+
+
+;--------------------------------------------------------------------
+;                             Inicio do programa
+;--------------------------------------------------------------------
+
+Place 0000H
+Inicio:
+    MOV R0, Principio
+    JMP R0
+
+
+Place 0A00H
+Principio:
+    MOV SP, stackPointer
+    CALL LimpaDisplay
+    CALL LimpaPerifericos
+    MOV R0, ON_OFF
+
+LeOnOff:
+    MOVB R1, [R0]
+    CMP R1, 1
+    JNE LeOnOff
+
+Ligado:
+    MOV R2, MenuPrincipal
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+
+LeOpcao:
+    MOV R3, Opcao
+    MOVB R4, [R3]
+    CMP R4, 0
+    JEQ LeOpcao
+    CMP R4, Comprar
+    JEQ RotinaComprar
+    CMP R4, UsarCartao
+    JEQ RotinaCartao
+    CMP R4, Stock
+    JEQ RotinaStock
+    CALL RotinaErro
+    JMP Ligado
+
+
+;---------------
+; Rotina Comprar
+;---------------
+RotinaComprar:
+    MOV R2, MenuCompra
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+
+LeOpcaoCompra:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+    CMP R1, 0
+    JEQ LeOpcaoCompra
+    CMP R1, Porto
+    JEQ RotinaPagamento
+    CMP R1, Lisboa
+    JEQ RotinaPagamento
+    CMP R1, Faro
+    JEQ RotinaPagamento
+    CMP R1, Braga
+    JEQ RotinaPagamento
+    CMP R1, Cancelar
+    JEQ Ligado 
+    CALL RotinaErro
+    
+    JMP Ligado
+
+;-----------------
+; Rotina Pagamento
+;-----------------
+RotinaPagamento:
+
+    JMP Ligado
+
+;-------------------
+; Rotina Usar Cartao
+;-------------------
+RotinaCartao:
+
+    JMP Ligado
+
+;-------------
+; Rotina Stock
+;-------------
+RotinaStock:
+
+    JMP Ligado
+
+
+
+
+
+
+
+;---------------------------------------------------------------
+; Rotinas que serao as mais usadas durante a escrita do programa
+;--------------------------------------------------------------- 
+
+;---------------------
+; Rotina Limpa Display
+;---------------------
+LimpaDisplay:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+
+    MOV R0, InicioEcra
+    MOV R1, FimEcra
+CicloLimpa:
+    MOV R2, CaracterVazio
+    MOVB [R0], R2
+    ADD R0, 1
+    CMP R0, R1
+    JLE CicloLimpa
+
+    POP R2
+    POP R1
+    POP R0
+    RET
+
+;----------------------
+; Rotina Mostra Display
+;----------------------
+MostraDisplay:
+    PUSH R0
+    PUSH R1 
+    PUSH R3
+
+    MOV R0, InicioEcra
+    MOV R1, FimEcra
+Ciclo_Display:
+    MOV R3, [R2]
+    MOV [R0], R3
+    ADD R0, 2
+    ADD R2, 2
+    CMP R0, R1
+    JLE Ciclo_Display
+
+    POP R3
+    POP R1
+    POP R0 
+    RET
+
+;------------------------
+;Rotina Limpa Perifericos
+;------------------------
+LimpaPerifericos:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    
+    MOV R0, ON_OFF
+    MOV R1, OK
+    MOV R2, Opcao
+    MOV R3, Dinheiro
+    MOV R4, 0
+    MOVB [R0], R4
+    MOVB [R1], R4
+    MOVB [R2], R4
+    MOVB [R3], R4
+
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+    RET
+
+;------------
+; Rotina Erro
+;------------
+RotinaErro:
+    PUSH R2
+    PUSH R1
+    PUSH R0
+
+    MOV R2, EcraErro
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+CicloErro:
+    MOV R0, OK
+    MOVB R1, [R0]
+    CMP R1, 1
+    JNE CicloErro
+
+    POP R0
+    POP R1
+    POP R2
+    RET
