@@ -6,7 +6,7 @@ ON_OFF          EQU 0020H ; Onde o utilizador ira ligar a maquina
 OK              EQU 0030H ; Onde o utilizador ira selecionar o OK
 Opcao           EQU 0040H ; Onde o utilizador ira escolher a opcao
 Dinheiro        EQU 0050H ; Onde o utilizador ira introduzir as moedas/notas
-PassePepe       EQU 0060H ; Onde o utilizador ira introduzir a passe do stock ou o nº
+PasseEPepe      EQU 0060H ; Onde o utilizador ira introduzir a passe do stock ou o nº
                           ; de pepe
 
 ;------------------------------------------------------------------------------------
@@ -242,6 +242,26 @@ EcraErroMoeda:
     String "                "
     String "OK pra continuar"
 
+Place 0950H
+MenuStock:
+    String "   INTRODUZA    "
+    String "    PASSWORD    "
+    String "                "
+    String "XXXXX           "
+    String "1-Repor Stock   "
+    String "2-Ver Stock     "
+    String "5-Cancelar      "
+
+Place 09D0H
+MenuUsarCartao:
+    String "                "
+    String "    UTILIZAR    "
+    String "     CARTAO     "
+    String "                "
+    String "1-Comprar       "
+    String "2-Recarregar    "
+    String "                "
+
 
 
 ;--------------------------------------------------------------------
@@ -254,7 +274,7 @@ Inicio:
     JMP R0                  ; salta para o endereco em questao
 
 
-Place 0A00H
+Place 0A50H
 Principio:
     MOV SP, stackPointer        ; stack pointer inicializada com o endereço fornecido nas variaveis
     CALL LimpaDisplay           ; chama a rotina de limpar o display para ficar todo em branco
@@ -291,19 +311,118 @@ LeOpcao:
     JMP Ligado                  ; e volta ao Ligado
 
 
+
 ;-------------------
 ; Rotina Usar Cartao
 ;-------------------
 RotinaCartao:
+    MOV R2, MenuCodigoPEPE 
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+    MOV R0, BaseDeDados
 
-    JMP Ligado
+loopCartao:
+    MOV R1, [R0]
+    MOV R2, FimBaseDeDados
+    MOV R3, [R2]
+
+    MOV R6, PasseEPepe
+    MOVB R7, [R6]
+
+    CMP R7, 0
+    JEQ loopCartao
+
+    CMP R7, R1
+    JEQ rotinaUsarCartao
+    MOV R9, 16
+    ADD R0, R9
+    CMP R0, R2
+    JNE loopCartao
+    
+
+rotinaUsarCartao:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+    CMP R1, 0
+    JEQ rotinaUsarCartao
+    CMP R1, Continuar
+    JEQ rotinaUsarCartao2
+    CALL RotinaErro
+    JEQ rotinaUsarCartao
+
+rotinaUsarCartao2:
+    MOV R2, MenuUsarCartao
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+opcaoCartao:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0 
+    JEQ opcaoCartao
+    CMP R1, Comprar
+    JEQ RotinaComprarCartao
+    CMP R1, Recarregar
+    JEQ RotinaRecarregar
+    CALL RotinaErro
+    JMP rotinaUsarCartao
+
+
+RotinaComprarCartao:
+    JMP opcaoCartao
+
+RotinaRecarregar:
+    JMP opcaoCartao
+
+
 
 ;-------------
 ; Rotina Stock
 ;-------------
 RotinaStock:
+    MOV R2, MenuStock
+    CALL MostraDisplay
 
-    JMP Ligado
+passStock:
+    MOV R0, 0110H
+    MOV R1, PasseEPepe
+    MOV R2, [R1]
+
+    ; compara R2 com R0
+    ; se nao for igual volta ao passStock
+    ; ADD R0, 1 ; para passar para o proximo caracter
+    ; 
+
+
+
+
+loopStock:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0
+    JEQ loopStock
+    CMP R1, 1
+    JEQ reporStock
+    CMP R1, 2
+    JEQ verStock
+    CMP R1, Cancelar
+    JEQ Ligado
+    CALL RotinaErro
+    JMP loopStock
+
+;----------------------
+; Rotina de repor stock
+;----------------------
+reporStock:
+    JMP loopStock
+
+;--------------------
+; Rotina de ver stock
+;--------------------
+verStock:
+    JMP loopStock
+
 
 ;---------------------------------------------------------------------------
 ;    Rotinas para comprar bilhete sem cartão, ao comprar bilhetes desta
@@ -445,6 +564,10 @@ RotinaPagamento3:
     CALL RotinaErroMoeda        ; se nao for nenhum destes valores significa que nao e uma moeda e chama a rotina de erro de moedas
     JMP RotinaPagamento2        ; volta para a parte de inserir moedas
 
+;------------------
+; NESTA PARTE FALTA ADICIONAR CADA MOEDA INSERIDA AO STOCK DA MAQUINA!!!!!!!!!!!!!!!!!!1
+;------------------
+
 inseriu5euros:
     MOV R8, Valor5Euros
     ADD R4, R8                  ; adiciona o valor 500 a variavel R4 (total inserido pelo user)
@@ -475,11 +598,11 @@ AdicionaValor:
 ConfirmarPagamento:
     MOV R5, OK                  ; guarda em R5 o endereco do periferico de entrada OK
     MOVB R7, [R5]               ; guarda em R7 o valor do periferico de entrada OK
-    CMP R7, 0
-    JEQ ConfirmarPagamento
-    CMP R7, 1
+    CMP R7, 0                   ; fica em loop a espera do per. de entrada
+    JEQ ConfirmarPagamento      
+    CMP R7, 1                   ; se OK for clicado passa para a etiqueta Final, onde vai ser gerado o PEPE
     JEQ Final
-    CALL RotinaErro
+    CALL RotinaErro             ; caso contrario nao foi um valor aceite e volta para o ConfirmarPagamento
     JMP ConfirmarPagamento
 
 Final:
@@ -494,9 +617,9 @@ Final:
 
 CriarPEPE:
     MOV R6, R1                  ; guarda o total a pagar que e o que vai para o cartao
-    SUB R4, R1                  ;
-    MOV R1 , TrocoAdevolver     ;
-    MOV [R1], R4                ;
+    SUB R4, R1                  ; subtrai o total inserido menos o total a pagar, para dar o troco
+    MOV R1 , TrocoAdevolver     ; R1 guarda o endereco do troco a devolver
+    MOV [R1], R4                ; guarda no espaco de memoria o resultado da subtracao
     MOV R1, 0                   ; guarda em R1 o valor 0
     MOV [R0], R1                ; limpa o espaco de memoria de total a pagar
 
@@ -521,12 +644,10 @@ NovoPEPE:
     ADD R2, 4                   ; aumenta o endereco de memoria para depois adicionar o saldo ao cartao
     MOV [R2], R6                ; guarda o valor do total a pagar
     MOV [R0], R1                ; adiciona a variavel numero de pepes o numero atual de pepes gerados
-
-    MOV R2, EcraSucesso
-    CALL MostraDisplay
-    ;JMP Ligado
-
-
+    CALL LimpaPerifericos       ; limpa os perifericos 
+    CALL MostraTalao            ; chama a rotina de mostrar o talao, com o troco e o pepe gerado
+    
+    JMP Ligado
 
 
 ;--------------------------------------------------------------------------
@@ -534,7 +655,12 @@ NovoPEPE:
 ;--------------------------------------------------------------------------
 
 
-
+;-------------------
+; Rotina Usar Cartao
+;-------------------
+;RotinaCartao:
+        
+    ;JMP Ligado
 
 ;-------------
 ; Rotina Stock
@@ -597,6 +723,28 @@ Ciclo_Display:
     POP R1
     POP R0 
     RET
+
+;--------------------
+; Rotina Mostra Talao
+;--------------------
+MostraTalao:
+    PUSH R2
+    PUSH R1
+    PUSH R0
+
+    MOV R2, MenuTalao
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+CicloTalao:
+    MOV R0, OK
+    MOVB R1, [R0]
+    CMP R1, 1
+    JNE CicloTalao
+
+    POP R0
+    POP R1
+    POP R2
+    RET 
 
 ;------------------------
 ;Rotina Limpa Perifericos
