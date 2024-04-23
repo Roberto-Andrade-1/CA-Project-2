@@ -85,8 +85,8 @@ QuantidadeMoedas20  EQU 0180H       ; endereco onde fica guardado o total de moe
 QuantidadeMoedas10  EQU 0190H       ; endereco onde fica guardado o total de moedas de 10
 DinheiroInserido    EQU 01A0H       ; endereco onde fica guardado o montade que o usuario inseriu com moedas
 TrocoAdevolver      EQU 01B0H       ; endereco onde fica guardado o troco a devolver ao utilizador
-BaseDeDados         EQU 1000H       ; endereco onde vao ficar guardados os numeros de pepe e o seu saldo
-FimBaseDeDados      EQU 1070H       ; endereco do fim da base de dados
+BaseDeDados         EQU 2000H       ; endereco onde vao ficar guardados os numeros de pepe e o seu saldo
+FimBaseDeDados      EQU 2070H       ; endereco do fim da base de dados
 
 ;--------------------------------------------------------------------------------------
 ;                                  Menus de informacao
@@ -120,16 +120,16 @@ MenuTalao:
     String "                "
     String "                "
     String "                "
-    String "                "
+    String "OK pra continuar"
 
 Place 0350H
 MenuCodigoPEPE:
+    String "                "    
     String "  INTRODUZA N.  "
     String "      PEPE      "
-    String "XXXXX           "
     String "                "
-    String "1-Continuar     "
-    String "5-Cancelar      "
+    String "      XXXX      "
+    String "                "
     String "                "
 
 Place 03D0H
@@ -140,7 +140,7 @@ MenuCompraPEPE:
     String "                "
     String "1-Comprar       "
     String "2-Recarregar    "
-    String "                "
+    String "5-Cancelar      "
 
 Place 0450H
 MenuStock1:
@@ -244,13 +244,13 @@ EcraErroMoeda:
 
 Place 0950H
 MenuStock:
+    String "                "
     String "   INTRODUZA    "
     String "    PASSWORD    "
     String "                "
-    String "XXXXX           "
-    String "1-Repor Stock   "
-    String "2-Ver Stock     "
-    String "5-Cancelar      "
+    String "     XXXXX      "
+    String "                "
+    String "                "
 
 Place 09D0H
 MenuUsarCartao:
@@ -262,7 +262,7 @@ MenuUsarCartao:
     String "2-Recarregar    "
     String "                "
 
-Place 06D0H
+Place 0A50H
 PepeErro:
     String "----- ERRO -----"
     String "                "
@@ -272,6 +272,25 @@ PepeErro:
     String "                "
     String "OK pra continuar"
 
+Place 0AD0H
+OpcoesStock:
+    String "     STOCK      "
+    String "                "
+    String "1-Repor Stock   "
+    String "2-Ver Stock     "
+    String "                "
+    String "5-Cancelar      "
+    String "                "
+
+Place 0B50H
+EcraRepor:
+    String "     STOCK      "
+    String "                "
+    String " TIPO DE MOEDA  "
+    String "  NO DINHEIRO   "
+    String "                "
+    String "   QUANTIDADE   "
+    String "   NO ESCRITA   "
 
 
 ;--------------------------------------------------------------------
@@ -284,7 +303,7 @@ Inicio:
     JMP R0                  ; salta para o endereco em questao
 
 
-Place 0A50H
+Place 1200H
 Principio:
     MOV SP, stackPointer        ; stack pointer inicializada com o endereço fornecido nas variaveis
     CALL LimpaDisplay           ; chama a rotina de limpar o display para ficar todo em branco
@@ -428,8 +447,6 @@ SaltoUsarCartao:
 
 SaltoStock:
     JMP RotinaStock
-
-
 
 ;--------------------------------------------------------------------------------------------
 ;                               Fim dos saltos a meio do programa
@@ -601,14 +618,13 @@ loopCartao:
 ;--------------------
 rotinaUsarCartao:
     CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+loopRotinaUsarCartao:    
     MOV R0, Opcao               ; guarda em R0 o endereco do per. de entrada Opcao
     MOVB R1, [R0]               ; R1 guarda o valor inserido no per. de entrada
     CMP R1, 0                   ; se R1 for igual a zero fica em loop
-    JEQ rotinaUsarCartao
+    JEQ loopRotinaUsarCartao
     CMP R1, Continuar           ; se for igual a Continuar salta para a rotina de usar cartao 2
     JEQ rotinaUsarCartao2       
-    CMP R1, Cancelar            ; se for iguala Cancelar salta para a rotina de Ligado
-    JEQ Ligado
     CALL RotinaErro             ; se nao e uma opcao valida chama a rotina de erro e volta para a rotina de usar cartao
     JEQ rotinaUsarCartao
 
@@ -626,10 +642,13 @@ opcaoCartao:
     JEQ RotinaComprarCartao
     CMP R1, Recarregar          ; se for igual a Recarregar salta para a rotina de recarregar o cartao
     JEQ RotinaRecarregar
+    CMP R1, Cancelar            ; se for iguala Cancelar salta para a rotina de Ligado
+    JEQ LigadoIntermedio
     CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
     JMP rotinaUsarCartao2
 
-
+LigadoIntermedio:
+    JMP Ligado
 
 
 ;-----------------------------
@@ -662,11 +681,13 @@ LeOpcaoCompraCartao:
     JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
 
     CMP R1, Cancelar            ; se for igual a Cancelar (5)
-    JEQ Ligado                  ; volta para o Ligado                 TA A DAR OUT OF BOUND AQUI
+    JEQ LigadoIntermedio2                 ; volta para o Ligado                 TA A DAR OUT OF BOUND AQUI
 
     CALL RotinaErro             ; se nao for nenhuma das opcoes chama a rotina de erro
     JMP RotinaComprarCartao2    ; e volta para a rotina de comprar 2
 
+LigadoIntermedio2:
+    JMP Ligado
 
 ;---------------------
 ; Rotina mais bilhetes
@@ -766,7 +787,6 @@ SaldoSuficiente:
 
 
 
-
 ;------------------------------
 ; Rotina de recarregar o cartao
 ;------------------------------
@@ -787,7 +807,7 @@ CartaoCorreto:
     MOV R3, 0                   ; vai guardar o total inserido
     MOV R8, DinheiroInserido
     MOV [R8], R3
-    MOV R2,                     ; display de recarregar
+    MOV R2, EcraErro; MUDAR PARA O CORRETO!!!!!
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopRecaregar:
@@ -846,11 +866,11 @@ confirmaCarregamento:
     MOV R2, OK
     MOV R4, [R2]
     CMP R4, 0
-    JEQ ConfirmarCarregamento
+    JEQ confirmaCarregamento
     CMP R4, 1
     JEQ finalCarregamento
     CALL RotinaErro
-    JMP ConfirmarCarregamento
+    JMP confirmaCarregamento
 
 finalCarregamento:
     ADD R0, 4
@@ -862,79 +882,183 @@ finalCarregamento:
 ;-------------------------------
 ;        Rotina Stock
 ;------------------------------
+
 RotinaStock:
+    MOV R0, 0110H               ; endereco do inicio da palavra passe
+    MOV R1, 0114H               ; endereco do fim da palavra passe
     MOV R2, MenuStock
     CALL MostraDisplay
 
 passStock:
-    MOV R0, 0110H
-    MOV R1, [R0]
-    MOV R2, Escrita
-    MOV R3, [R2]
-
-    CMP R3, R1
-    JNE passStock
-
-    ADD R0, 1
-    MOV R1, [R0]
     CALL LimpaPerifericos
-    MOV R2, Escrita
-    MOV R3, [R2]
-    CMP R3, R1
-    JNE passStock
+passStock2:
+    MOVB R2, [R0]
+    MOV R3, Escrita
+    MOVB R4, [R3]
 
-    ADD R0, 1
-    MOV R1, [R0]
-    CALL LimpaPerifericos
-    MOV R2, Escrita
-    MOV R3, [R2]
-    CMP R3, R1
-    JNE passStock
-
-    ADD R0, 1
-    MOV R1, [R0]
-    CALL LimpaPerifericos
-    MOV R2, Escrita
-    MOV R3, [R2]
-    CMP R3, R1
-    JNE passStock
-
-    ADD R0, 1
-    MOV R1, [R0]
-    CALL LimpaPerifericos
-    MOV R2, Escrita
-    MOV R3, [R2]
-    CMP R3, R1
-    JNE passStock
+    CMP R4, 0
+    JEQ passStock2
+    CMP R4, R2 
+    JNE RotinaStock
+    ADD R0, 1 
+    CMP R0, R1
+    JLE passStock
 
 loopStock:
+    MOV R2, OpcoesStock
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+loopStock2:
     MOV R0, Opcao
     MOVB R1, [R0]
 
     CMP R1, 0
-    JEQ loopStock
+    JEQ loopStock2
     CMP R1, 1
     JEQ reporStock
     CMP R1, 2
     JEQ verStock
     CMP R1, Cancelar
-    JEQ Ligado
+    JEQ LigadoIntermedio3
     CALL RotinaErro
     JMP loopStock
+
+LigadoIntermedio3:
+    JMP Ligado
 
 ;----------------------
 ; Rotina de repor stock
 ;----------------------
 reporStock:
-    
+    MOV R2, EcraRepor 
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+    MOV R4, 50H
+    MOV R5, 20H
+    MOV R6, 10H
+loopRepor:
+    MOV R0, Dinheiro
+    MOVB R1, [R0]
+    MOV R2, Escrita
+    MOVB R3, [R2]
 
+    CMP R1, 0 
+    JEQ loopRepor
+    CMP R3, 0
+    JEQ loopRepor
+
+    CMP R1, 5
+    JEQ stockNota5
+
+    CMP R1, 2
+    JEQ stockMoeda2
+
+    CMP R1, 1
+    JEQ stockMoeda1
+
+    CMP R1, R4
+    JEQ stockMoeda50
+
+    CMP R1, R5
+    JEQ stockMoeda20
+
+    CMP R1, R6
+    JEQ stockMoeda10
+
+    CALL RotinaErroMoeda
+    JEQ loopRepor
+
+stockNota5:
+    MOV R4, QuantidadeNotas5
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
     JMP loopStock
+
+stockMoeda2:
+    MOV R4, QuantidadeMoedas2
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
+    JMP loopStock
+
+stockMoeda1:
+    MOV R4, QuantidadeMoedas1
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
+    JMP loopStock
+
+stockMoeda50:
+    MOV R4, QuantidadeMoedas50
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
+    JMP loopStock
+
+stockMoeda20:
+    MOV R4, QuantidadeMoedas20
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
+    JMP loopStock
+
+stockMoeda10:
+    MOV R4, QuantidadeMoedas10
+    MOV R5, [R4]
+    ADD R5, R3
+    MOV [R4], R5
+    JMP loopStock
+
 
 ;--------------------
 ; Rotina de ver stock
 ;--------------------
 verStock:
-    JMP loopStock
+    MOV R2, MenuStock1
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+loopVerStock:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0
+    JEQ loopVerStock
+    CMP R1, Seguinte
+    JEQ verStock2
+    CALL RotinaErro
+    JMP verStock
+
+verStock2:
+    MOV R2, MenuStock2
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+loopVerStock2:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0
+    JEQ loopVerStock2
+    CMP R1, Seguinte
+    JEQ verStock3
+    CALL RotinaErro
+    JMP verStock2
+
+verStock3:
+    MOV R2, MenuStock3
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+loopVerStock3:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0
+    JEQ loopVerStock3
+    CMP R1, 2
+    JEQ loopStock
+    CALL RotinaErro
+    JMP verStock3
+
 
 
 ;---------------------------------------------------------------
