@@ -262,6 +262,16 @@ MenuUsarCartao:
     String "2-Recarregar    "
     String "                "
 
+Place 06D0H
+PepeErro:
+    String "----- ERRO -----"
+    String "                "
+    String "      PEPE      "
+    String "      NAO       "
+    String "     EXISTE     "
+    String "                "
+    String "OK pra continuar"
+
 
 
 ;--------------------------------------------------------------------
@@ -316,61 +326,72 @@ LeOpcao:
 ; Rotina Usar Cartao
 ;-------------------
 RotinaCartao:
-    MOV R2, MenuCodigoPEPE 
-    CALL MostraDisplay
-    CALL LimpaPerifericos
-    MOV R0, BaseDeDados
+    MOV R2, MenuCodigoPEPE      ; R2 guarda o endereco do display para inserir o numero de pepe
+    CALL MostraDisplay          ; chamada da rotina de mostrar display
+    CALL LimpaPerifericos       ; limpa os perifericos 
+    MOV R0, BaseDeDados         ; R0 guarda o endereco do incio da base de dados
 
 loopCartao:
-    MOV R1, [R0]
-    MOV R2, FimBaseDeDados
-    MOV R3, [R2]
+    MOV R1, [R0]                ; R1 fica com o valor que esta na base de dados
+    MOV R2, FimBaseDeDados      ; R2 guarda o endereco do fim da base de dados
 
-    MOV R6, PasseEPepe
-    MOVB R7, [R6]
+    MOV R6, PasseEPepe          ; R6 guarda o endereco do per. de entrada para introducao do num de pepe
+    MOVB R7, [R6]               ; R7 fica com o valor que foi inserido no per. de entrada
 
-    CMP R7, 0
-    JEQ loopCartao
+    CMP R7, 0                   ; compara a ver se e zero
+    JEQ loopCartao              ; se for fica em loop a espera de um valor maior que zero a ser introduzido pelo user
 
-    CMP R7, R1
-    JEQ rotinaUsarCartao
-    MOV R9, 16
-    ADD R0, R9
-    CMP R0, R2
-    JNE loopCartao
-    
+    CMP R7, R1                  ; compara o valor introduzido com o que esta atualmente a ser "visto" na base de dados
+    JEQ rotinaUsarCartao        ; se for igual, o cartao existe na base de dados e pode fazer operacoes com esse cartao
+    MOV R3, 16                  ; R3 guarda o valor 16
+    ADD R0, R3                  ; adicionamos ao endereco que indica a base de dados mais 16 para irmos para o proximo end. de mem. que pode conter outro pepe
+    CMP R0, R2                  ; verifica se ja chegou ao fim da base de dados
+    JNE loopCartao              ; se nao chegou volta ao loop do cartao para verificar se esse cartoa existe
+    CALL rotinaNaoExistePepe    ; caso contrario esse PEPE nao existe no sistema e volta para a etiqueta de rotina usar cartao
+    JMP RotinaCartao
 
+;--------------------
+; Rotina de Continuar
+;--------------------
 rotinaUsarCartao:
-    MOV R0, Opcao
-    MOVB R1, [R0]
-    CMP R1, 0
+    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+    MOV R0, Opcao               ; guarda em R0 o endereco do per. de entrada Opcao
+    MOVB R1, [R0]               ; R1 guarda o valor inserido no per. de entrada
+    CMP R1, 0                   ; se R1 for igual a zero fica em loop
     JEQ rotinaUsarCartao
-    CMP R1, Continuar
-    JEQ rotinaUsarCartao2
-    CALL RotinaErro
+    CMP R1, Continuar           ; se for igual a Continuar salta para a rotina de usar cartao 2
+    JEQ rotinaUsarCartao2       
+    CALL RotinaErro             ; se nao e uma opcao valida chama a rotina de erro e volta para a rotina de usar cartao
     JEQ rotinaUsarCartao
 
 rotinaUsarCartao2:
-    MOV R2, MenuUsarCartao
-    CALL MostraDisplay
-    CALL LimpaPerifericos
+    MOV R2, MenuUsarCartao      ; guarda em R2 o endereco do display de opcoes do cartao
+    CALL MostraDisplay          ; chama a rotina de usar cartao
+    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
 opcaoCartao:
-    MOV R0, Opcao
-    MOVB R1, [R0]
+    MOV R0, Opcao               ; R0 guarda o endereco do per. de entrada Opcao
+    MOVB R1, [R0]               ; R1 guarda o valor introduzido no per. de entrada
 
-    CMP R1, 0 
+    CMP R1, 0                   ; compara com 0, se for fica em loop
     JEQ opcaoCartao
-    CMP R1, Comprar
+    CMP R1, Comprar             ; se for igual a Comprar salta para a rotina de comprar com cartao
     JEQ RotinaComprarCartao
-    CMP R1, Recarregar
+    CMP R1, Recarregar          ; se for igual a Recarregar salta para a rotina de recarregar o cartao
     JEQ RotinaRecarregar
-    CALL RotinaErro
-    JMP rotinaUsarCartao
+    CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
+    JMP rotinaUsarCartao2
 
 
+;-----------------------------
+; Rotina de comprar com cartao
+;-----------------------------
 RotinaComprarCartao:
     JMP opcaoCartao
 
+
+;------------------------------
+; Rotina de recarregar o cartao
+;------------------------------
 RotinaRecarregar:
     JMP opcaoCartao
 
@@ -816,3 +837,25 @@ CicloErroMoeda:
     POP R1
     POP R2
     RET 
+
+;------------------
+; Rotina Erro Moeda
+;------------------
+rotinaNaoExistePepe:
+    PUSH R2
+    PUSH R1
+    PUSH R0
+
+    MOV R2, PepeErro
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+CicloErroPepe:
+    MOV R0, OK
+    MOVB R1, [R0]
+    CMP R1, 1
+    JNE CicloErroPepe
+
+    POP R0
+    POP R1
+    POP R2
+    RET
