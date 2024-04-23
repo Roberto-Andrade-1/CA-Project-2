@@ -6,7 +6,7 @@ ON_OFF          EQU 0020H ; Onde o utilizador ira ligar a maquina
 OK              EQU 0030H ; Onde o utilizador ira selecionar o OK
 Opcao           EQU 0040H ; Onde o utilizador ira escolher a opcao
 Dinheiro        EQU 0050H ; Onde o utilizador ira introduzir as moedas/notas
-PasseEPepe      EQU 0060H ; Onde o utilizador ira introduzir a passe do stock ou o nº
+Escrita         EQU 0060H ; Onde o utilizador ira introduzir a passe do stock ou o nº
                           ; de pepe
 
 ;------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ MenuCodigoPEPE:
     String "XXXXX           "
     String "                "
     String "1-Continuar     "
-    String "2-Cancelar      "
+    String "5-Cancelar      "
     String "                "
 
 Place 03D0H
@@ -312,137 +312,14 @@ LeOpcao:
     JEQ RotinaComprar           ; entao salta para a rotina de comprar
 
     CMP R1, UsarCartao          ; se o valor for igual a UsarCartao (2)
-    JEQ RotinaCartao            ; entao salta para a rotina de usar cartao
+    JEQ SaltoUsarCartao            ; entao salta para a rotina de usar cartao
 
     CMP R1, Stock               ; se o valor for igual a Stock (3)
-    JEQ RotinaStock             ; entao salta para a rotina de stock
+    JEQ SaltoStock             ; entao salta para a rotina de stock
 
     CALL RotinaErro             ; se nao for nenhuma das disponiveis chama a rotina de erro
     JMP Ligado                  ; e volta ao Ligado
 
-
-
-;-------------------
-; Rotina Usar Cartao
-;-------------------
-RotinaCartao:
-    MOV R2, MenuCodigoPEPE      ; R2 guarda o endereco do display para inserir o numero de pepe
-    CALL MostraDisplay          ; chamada da rotina de mostrar display
-    CALL LimpaPerifericos       ; limpa os perifericos 
-    MOV R0, BaseDeDados         ; R0 guarda o endereco do incio da base de dados
-
-loopCartao:
-    MOV R1, [R0]                ; R1 fica com o valor que esta na base de dados
-    MOV R2, FimBaseDeDados      ; R2 guarda o endereco do fim da base de dados
-
-    MOV R6, PasseEPepe          ; R6 guarda o endereco do per. de entrada para introducao do num de pepe
-    MOVB R7, [R6]               ; R7 fica com o valor que foi inserido no per. de entrada
-
-    CMP R7, 0                   ; compara a ver se e zero
-    JEQ loopCartao              ; se for fica em loop a espera de um valor maior que zero a ser introduzido pelo user
-
-    CMP R7, R1                  ; compara o valor introduzido com o que esta atualmente a ser "visto" na base de dados
-    JEQ rotinaUsarCartao        ; se for igual, o cartao existe na base de dados e pode fazer operacoes com esse cartao
-    MOV R3, 16                  ; R3 guarda o valor 16
-    ADD R0, R3                  ; adicionamos ao endereco que indica a base de dados mais 16 para irmos para o proximo end. de mem. que pode conter outro pepe
-    CMP R0, R2                  ; verifica se ja chegou ao fim da base de dados
-    JNE loopCartao              ; se nao chegou volta ao loop do cartao para verificar se esse cartoa existe
-    CALL rotinaNaoExistePepe    ; caso contrario esse PEPE nao existe no sistema e volta para a etiqueta de rotina usar cartao
-    JMP RotinaCartao
-
-;--------------------
-; Rotina de Continuar
-;--------------------
-rotinaUsarCartao:
-    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
-    MOV R0, Opcao               ; guarda em R0 o endereco do per. de entrada Opcao
-    MOVB R1, [R0]               ; R1 guarda o valor inserido no per. de entrada
-    CMP R1, 0                   ; se R1 for igual a zero fica em loop
-    JEQ rotinaUsarCartao
-    CMP R1, Continuar           ; se for igual a Continuar salta para a rotina de usar cartao 2
-    JEQ rotinaUsarCartao2       
-    CALL RotinaErro             ; se nao e uma opcao valida chama a rotina de erro e volta para a rotina de usar cartao
-    JEQ rotinaUsarCartao
-
-rotinaUsarCartao2:
-    MOV R2, MenuUsarCartao      ; guarda em R2 o endereco do display de opcoes do cartao
-    CALL MostraDisplay          ; chama a rotina de usar cartao
-    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
-opcaoCartao:
-    MOV R0, Opcao               ; R0 guarda o endereco do per. de entrada Opcao
-    MOVB R1, [R0]               ; R1 guarda o valor introduzido no per. de entrada
-
-    CMP R1, 0                   ; compara com 0, se for fica em loop
-    JEQ opcaoCartao
-    CMP R1, Comprar             ; se for igual a Comprar salta para a rotina de comprar com cartao
-    JEQ RotinaComprarCartao
-    CMP R1, Recarregar          ; se for igual a Recarregar salta para a rotina de recarregar o cartao
-    JEQ RotinaRecarregar
-    CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
-    JMP rotinaUsarCartao2
-
-
-;-----------------------------
-; Rotina de comprar com cartao
-;-----------------------------
-RotinaComprarCartao:
-    JMP opcaoCartao
-
-
-;------------------------------
-; Rotina de recarregar o cartao
-;------------------------------
-RotinaRecarregar:
-    JMP opcaoCartao
-
-
-
-;-------------
-; Rotina Stock
-;-------------
-RotinaStock:
-    MOV R2, MenuStock
-    CALL MostraDisplay
-
-passStock:
-    MOV R0, 0110H
-    MOV R1, PasseEPepe
-    MOV R2, [R1]
-
-    ; compara R2 com R0
-    ; se nao for igual volta ao passStock
-    ; ADD R0, 1 ; para passar para o proximo caracter
-    ; 
-
-
-
-
-loopStock:
-    MOV R0, Opcao
-    MOVB R1, [R0]
-
-    CMP R1, 0
-    JEQ loopStock
-    CMP R1, 1
-    JEQ reporStock
-    CMP R1, 2
-    JEQ verStock
-    CMP R1, Cancelar
-    JEQ Ligado
-    CALL RotinaErro
-    JMP loopStock
-
-;----------------------
-; Rotina de repor stock
-;----------------------
-reporStock:
-    JMP loopStock
-
-;--------------------
-; Rotina de ver stock
-;--------------------
-verStock:
-    JMP loopStock
 
 
 ;---------------------------------------------------------------------------
@@ -542,6 +419,21 @@ LeOpcaoBilhetes:
     CALL RotinaErro             ; se nao e nenhum dos outros chama a rotina de erro 
     JMP Ligado                  ; e salta para o ligado
 
+;--------------------------------------------------------------------------------------------
+;                           Saltos a meio para nao ficar out of bounds
+;--------------------------------------------------------------------------------------------
+
+SaltoUsarCartao:
+    JMP RotinaCartao
+
+SaltoStock:
+    JMP RotinaStock
+
+
+
+;--------------------------------------------------------------------------------------------
+;                               Fim dos saltos a meio do programa
+;--------------------------------------------------------------------------------------------
 
 ;-----------------
 ; Rotina Pagamento
@@ -554,13 +446,13 @@ RotinaPagamento:
 RotinaPagamento2:
     MOV R2, DisplayTotalPagar   ; guarda em R2 o endereco do display que mostra o total a pagar
     CALL MostraDisplay          ; chama a rotina de mostrar o display
-    CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
 RotinaPagamento3:
+    CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
     MOV R2, Dinheiro            ; guarda em R2 o endereco do periferico de entrada Dinheiro
     MOVB R6, [R2]               ; guarda em R6 o valor do periferico de entrada Dinheiro
-    MOV R8, 50H
-    MOV R9, 20H
-    MOV R10, 10H
+    MOV R8, 50H                 ; guarda em R8 o valor 50 em hexadecimal
+    MOV R9, 20H                 ; guarda em R9 o valor 20 em hexadecimal 
+    MOV R10, 10H                ; guarda em R10 o valor 10 em hexadecimal
     CMP R6, 0                   ; se nao houver dinheiro introduzido fica em loop a espera
     JEQ RotinaPagamento3        ; saltando para a rotina de pagamento 3
 
@@ -670,30 +562,379 @@ NovoPEPE:
     
     JMP Ligado
 
-
-;--------------------------------------------------------------------------
-;         Rotina de usar cartao, podendo recarregar e comprar viagens
-;--------------------------------------------------------------------------
-
+;------------------------------------------------------------------------------------------------
+;
+;------------------------------------------------------------------------------------------------
+;                          Rotina de pagamento com cartao e recarregar cartao
+;------------------------------------------------------------------------------------------------
 
 ;-------------------
 ; Rotina Usar Cartao
 ;-------------------
-;RotinaCartao:
-        
-    ;JMP Ligado
+RotinaCartao:
+    MOV R2, MenuCodigoPEPE      ; R2 guarda o endereco do display para inserir o numero de pepe
+    CALL MostraDisplay          ; chamada da rotina de mostrar display
+    CALL LimpaPerifericos       ; limpa os perifericos 
+    MOV R0, BaseDeDados         ; R0 guarda o endereco do incio da base de dados
 
-;-------------
-; Rotina Stock
-;-------------
-;RotinaStock:
+loopCartao:
+    MOV R1, [R0]                ; R1 fica com o valor que esta na base de dados
+    MOV R2, FimBaseDeDados      ; R2 guarda o endereco do fim da base de dados
 
- ;   JMP Ligado
+    MOV R6, Escrita          ; R6 guarda o endereco do per. de entrada para introducao do num de pepe
+    MOVB R7, [R6]               ; R7 fica com o valor que foi inserido no per. de entrada
+
+    CMP R7, 0                   ; compara a ver se e zero
+    JEQ loopCartao              ; se for fica em loop a espera de um valor maior que zero a ser introduzido pelo user
+
+    CMP R7, R1                  ; compara o valor introduzido com o que esta atualmente a ser "visto" na base de dados
+    JEQ rotinaUsarCartao        ; se for igual, o cartao existe na base de dados e pode fazer operacoes com esse cartao
+    MOV R3, 16                  ; R3 guarda o valor 16
+    ADD R0, R3                  ; adicionamos ao endereco que indica a base de dados mais 16 para irmos para o proximo end. de mem. que pode conter outro pepe
+    CMP R0, R2                  ; verifica se ja chegou ao fim da base de dados
+    JNE loopCartao              ; se nao chegou volta ao loop do cartao para verificar se esse cartoa existe
+    CALL rotinaNaoExistePepe    ; caso contrario esse PEPE nao existe no sistema e volta para a etiqueta de rotina usar cartao
+    JMP RotinaCartao
+
+;--------------------
+; Rotina de Continuar
+;--------------------
+rotinaUsarCartao:
+    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+    MOV R0, Opcao               ; guarda em R0 o endereco do per. de entrada Opcao
+    MOVB R1, [R0]               ; R1 guarda o valor inserido no per. de entrada
+    CMP R1, 0                   ; se R1 for igual a zero fica em loop
+    JEQ rotinaUsarCartao
+    CMP R1, Continuar           ; se for igual a Continuar salta para a rotina de usar cartao 2
+    JEQ rotinaUsarCartao2       
+    CMP R1, Cancelar            ; se for iguala Cancelar salta para a rotina de Ligado
+    JEQ Ligado
+    CALL RotinaErro             ; se nao e uma opcao valida chama a rotina de erro e volta para a rotina de usar cartao
+    JEQ rotinaUsarCartao
+
+rotinaUsarCartao2:
+    MOV R2, MenuCompraPEPE      ; guarda em R2 o endereco do display de opcoes do cartao
+    CALL MostraDisplay          ; chama a rotina de usar cartao
+    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+opcaoCartao:
+    MOV R0, Opcao               ; R0 guarda o endereco do per. de entrada Opcao
+    MOVB R1, [R0]               ; R1 guarda o valor introduzido no per. de entrada
+
+    CMP R1, 0                   ; compara com 0, se for fica em loop
+    JEQ opcaoCartao
+    CMP R1, Comprar             ; se for igual a Comprar salta para a rotina de comprar com cartao
+    JEQ RotinaComprarCartao
+    CMP R1, Recarregar          ; se for igual a Recarregar salta para a rotina de recarregar o cartao
+    JEQ RotinaRecarregar
+    CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
+    JMP rotinaUsarCartao2
 
 
 
 
+;-----------------------------
+; Rotina de comprar com cartao
+;-----------------------------
+RotinaComprarCartao:
+    MOV R3, 0                   ; R3 guarda o total a pagar de bilhetes
+RotinaComprarCartao2:
+    MOV R2, MenuCompra          ; R2 guarda o endereco do menu de compra
+    CALL MostraDisplay          ; chama a rotina de mostrar o display
+    CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
 
+LeOpcaoCompraCartao:
+    MOV R0, Opcao               ; guarda em R0 o endereco da Opcao
+    MOVB R1, [R0]               ; guarda em R1 o valor que esta no endereco
+
+    CMP R1, 0                   ; se for 0 fica em loop
+    JEQ LeOpcaoCompraCartao
+
+    CMP R1, Porto               ; se for igual a Porto (1) 
+    JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
+
+    CMP R1, Lisboa              ; se for iguala a Lisboa (2)
+    JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
+
+    CMP R1, Faro                ; se for igual a Faro (3)
+    JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
+
+    CMP R1, Braga               ; se for igual a Braga (4)
+    JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
+
+    CMP R1, Cancelar            ; se for igual a Cancelar (5)
+    JEQ Ligado                  ; volta para o Ligado                 TA A DAR OUT OF BOUND AQUI
+
+    CALL RotinaErro             ; se nao for nenhuma das opcoes chama a rotina de erro
+    JMP RotinaComprarCartao2    ; e volta para a rotina de comprar 2
+
+
+;---------------------
+; Rotina mais bilhetes
+;---------------------
+RotinaMaisBilhetesCartao:
+    MOV R0, TotalPagar          ; guarda em R0 o endereco de total a pagar
+    
+    CMP R1, 1                   ; se for igual a 1
+    JEQ BPortoCartao            ; salta para o bilhete do porto
+    CMP R1, 2                   ; se for igual a 2
+    JEQ BLisboaCartao           ; salta para o bilhete de Lisboa
+    CMP R1, 3                   ; se for igual a 3
+    JEQ BFaroCartao             ; salta para o bilhete de Faro
+    CMP R1, 4                   ; se for igual a 4
+    JEQ BBragaCartao            ; salta para o bilhete de Braga
+
+BPortoCartao:
+    MOV R2, CustoPorto          ; guarda em R2 o custo do bilhete para o Porto
+    ADD R3, R2                  ; adiciona ao R3 (total a pagar) o valor de R2 (CustoPorto)
+    MOV [R0], R3                ; no valor do endereco de memoria do total a pagar mete o valor de R5
+    JMP ecraMaisBilhetesCartao  ; salta para o ecra a perguntar se quer mais bilhetes
+BLisboaCartao:
+    MOV R2, CustoLisboa         ; guarda em R2 o custo do bilhete para Lisboa
+    ADD R3, R2                  ; adiciona ao R5 (total a pagar) o valor de R2 (CustoLisboa)
+    MOV [R0], R3                ; no valor do endereco de memoria do total a pagar mete o valor de R5
+    JMP ecraMaisBilhetesCartao  ; salta para o ecra a perguntar se quer mais bilhetes
+BFaroCartao:
+    MOV R2, CustoFaro           ; guarda em R2 o custo do bilhete para Faro
+    ADD R3, R2                  ; adiciona ao R5 (total a pagar) o valor de R2 (CustoFaro)
+    MOV [R0], R3                ; no valor do endereco de memoria do total a pagar mete o valor de R5
+    JMP ecraMaisBilhetesCartao  ; salta para o ecra a perguntar se quer mais bilhetes
+BBragaCartao:
+    MOV R2, CustoBraga          ; guarda em R2 o custo do bilhete para Braga
+    ADD R3, R2                  ; adiciona ao R5 (total a pagar) o valor de R2 (CustoBraga)
+    MOV [R0], R3                ; no valor do endereco de memoria do total a pagar mete o valor de R5
+
+ecraMaisBilhetesCartao:
+    MOV R2, DisplayMaisBilhetes ; guarda em R2 o endereco do display de mais bilhetes
+    CALL MostraDisplay          ; chama a rotina de mostar display
+    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+LeOpcaoBilhetesCartao:
+    MOV R0, OK                  ; guarda em R0 o endereco de perfiferico de entrada OK
+    MOVB R1, [R0]               ; guarda em R1 o valor do periferico de entrada
+
+    CMP R1, 0                   ; compara se o valor e 0
+    JEQ LeOpcaoBilhetesCartao   ; se sim fica em loop a espera de um valor aceite
+
+    CMP R1, 1                   ; compara se o valor e 1
+    JEQ RotinaComprarCartao2    ; se sim salta para a rotina de comprar mais bilhetes
+
+    CMP R1, 2                   ; compara se o valor e 2
+    JEQ RotinaPagamentoCartao   ; se sim salta para a rotina de pagamento dos bilhetes
+
+    CALL RotinaErro             ; se nao e nenhum dos outros chama a rotina de erro 
+    JMP Ligado                  ; e salta para o ligado
+
+;-------------------------------
+; Rotina de pagamento com cartao
+;-------------------------------
+
+RotinaPagamentoCartao:
+    MOV R0, TotalPagar          ; endereco com o total a pagar
+    MOV R1, [R0]                ; valor com o total a pagar
+    MOV R3, BaseDeDados         ; guarda o endereco de memoria com o inicio da base de dados
+RotinaPagamentoCartao2:
+    MOV R4, [R3]                ; R4 vai ter o valor que esta no endereco de memoria
+    MOV R6, FimBaseDeDados      ;
+    MOV R2, DisplayTotalPagarCartao
+    CALL MostraDisplay
+
+    CMP R4, R7                  ; R7 tem o num de PEPE a ser usado agora compara com o que tem na base de dados a ver se é o mesmo
+    JEQ SegueCompra             ; se o numero de cartao existe prossegue a compra
+    MOV R5, 16                  ; guarda em R5 o valor 16 para mover para o proximo endereco de mem
+    ADD R3, R5                  ; vai para o proximo endereco de mem da base de dados
+    CMP R3, R6                  ; compara a ver se chegou ao fim da base de dados
+    JNE RotinaPagamentoCartao2  ; se não chegou ao fim volta para o rotina pagamento cartao 2
+
+SegueCompra:
+    ADD R3, 4                   ; aumenta 4 ao endereco onde esta a base de dados que e onde contem o saldo do cartao
+    MOV R4, [R3]                ; R4 guarda o valor que esta no endereco
+    CMP R4, R1                  ; compra o valor que tem em R4 com R1 (total a pagar)
+    JGE SaldoSuficiente         ; se esse valor for maior ou igual ao total a pagar segue para a etiqueta saldo suficiente
+    MOV R1, 0                   ; guarda em R1 o valor 0
+    MOV [R0], R1                ; limpa os valores que estao no total a pagar
+    MOV R2, EcraErro            ; mostra que nao tem saldo suficiente para a compra ser realizada
+    CALL MostraDisplay          ; aqui vai ficar a espera do ok
+    JMP rotinaUsarCartao2       ; volta para as opcoes do cartao
+    
+SaldoSuficiente:
+    SUB R4, R1                  ; retira do saldo o valor a pagar
+    MOV [R3], R4                ; atualiza o saldo na base de dados
+    MOV R1, 0                   ; guarda em R1 o valor 0
+    MOV [R0], R1                ; limpa os valores que estao no total a pagar
+    MOV R2, EcraSucesso         ; compra feita com sucesso e mostrar o saldo atual do cartao
+    CALL MostraDisplay
+    JMP Ligado
+
+
+
+
+;------------------------------
+; Rotina de recarregar o cartao
+;------------------------------
+RotinaRecarregar:
+    MOV R0, BaseDeDados
+proximoCartao:
+    MOV R1, [R0]
+    MOV R3, FimBaseDeDados
+
+    CMP R7, R1
+    JEQ CartaoCorreto
+    MOV R4, 16                  ; guarda em R5 o valor 16 para mover para o proximo endereco de mem
+    ADD R0, R4                  ; vai para o proximo endereco de mem da base de dados
+    CMP R0, R3
+    JMP proximoCartao
+
+CartaoCorreto:
+    MOV R3, 0                   ; vai guardar o total inserido
+    MOV R8, DinheiroInserido
+    MOV [R8], R3
+    MOV R2,                     ; display de recarregar
+    CALL MostraDisplay
+    CALL LimpaPerifericos
+loopRecaregar:
+    MOV R0, Dinheiro            ; guarda em R0 o endereco do per. de entrada
+    MOV R2, [R0]                ; R2 guarda o valor que esta no per. de entrada
+    MOV R5, 50H                 ;
+    MOV R6, 20H                 ;
+    MOV R7, 10H                 ;
+
+    CMP R2, 0                   ; compara com 0, se for igual fica em loop
+    JEQ loopRecaregar
+    CMP R2, 5                   ; se for igual a 5 introduziu uma nota de 5 
+    JEQ pos5euros
+    CMP R2, 2                   ; se for igual a 2 introduziu uma moeda de 2
+    JEQ pos2euros
+    CMP R2, 1                   ; se for igual a 1 introduziu uma moeda de 1
+    JEQ pos1euro
+    CMP R2, R5                  ; se for igual a 50 introduziu uma moeda de 50
+    JEQ pos50cent
+    CMP R2, R6                  ; se for igual a 20 introduziu uma moeda de 20
+    JEQ pos20cent
+    CMP R2, R7                  ; se for igual a 10 introduziu uma moeda de 10
+    JEQ pos10cent
+
+    CALL RotinaErroMoeda        ; se nao nao introduziu nenhuma moeda
+    JMP loopRecaregar           ; e volta para a etiqueta de introduzir moedas
+
+pos5euros:
+    MOV R4, Valor5Euros
+    ADD R3, R4
+    JMP poeNaMemoria
+pos2euros:
+    MOV R4, Valor2Euros
+    ADD R3, R4
+    JMP poeNaMemoria
+pos1euro:
+    MOV R4, Valor1Euro
+    ADD R3, R4
+    JMP poeNaMemoria
+pos50cent:
+    MOV R4, Valor50Cent
+    ADD R3, R4
+    JMP poeNaMemoria
+pos20cent:
+    MOV R4, Valor20Cent
+    ADD R3, R4
+    JMP poeNaMemoria
+pos10cent:
+    MOV R4, Valor10Cent
+    ADD R3, R4
+
+poeNaMemoria:
+    MOV [R8], R3
+    MOV R3, [R8]
+confirmaCarregamento:
+    MOV R2, OK
+    MOV R4, [R2]
+    CMP R4, 0
+    JEQ ConfirmarCarregamento
+    CMP R4, 1
+    JEQ finalCarregamento
+    CALL RotinaErro
+    JMP ConfirmarCarregamento
+
+finalCarregamento:
+    ADD R0, 4
+    MOV R1, [R0]
+    ADD R3, R1
+    MOV [R0], R3
+
+
+;-------------------------------
+;        Rotina Stock
+;------------------------------
+RotinaStock:
+    MOV R2, MenuStock
+    CALL MostraDisplay
+
+passStock:
+    MOV R0, 0110H
+    MOV R1, [R0]
+    MOV R2, Escrita
+    MOV R3, [R2]
+
+    CMP R3, R1
+    JNE passStock
+
+    ADD R0, 1
+    MOV R1, [R0]
+    CALL LimpaPerifericos
+    MOV R2, Escrita
+    MOV R3, [R2]
+    CMP R3, R1
+    JNE passStock
+
+    ADD R0, 1
+    MOV R1, [R0]
+    CALL LimpaPerifericos
+    MOV R2, Escrita
+    MOV R3, [R2]
+    CMP R3, R1
+    JNE passStock
+
+    ADD R0, 1
+    MOV R1, [R0]
+    CALL LimpaPerifericos
+    MOV R2, Escrita
+    MOV R3, [R2]
+    CMP R3, R1
+    JNE passStock
+
+    ADD R0, 1
+    MOV R1, [R0]
+    CALL LimpaPerifericos
+    MOV R2, Escrita
+    MOV R3, [R2]
+    CMP R3, R1
+    JNE passStock
+
+loopStock:
+    MOV R0, Opcao
+    MOVB R1, [R0]
+
+    CMP R1, 0
+    JEQ loopStock
+    CMP R1, 1
+    JEQ reporStock
+    CMP R1, 2
+    JEQ verStock
+    CMP R1, Cancelar
+    JEQ Ligado
+    CALL RotinaErro
+    JMP loopStock
+
+;----------------------
+; Rotina de repor stock
+;----------------------
+reporStock:
+    
+
+    JMP loopStock
+
+;--------------------
+; Rotina de ver stock
+;--------------------
+verStock:
+    JMP loopStock
 
 
 ;---------------------------------------------------------------
@@ -776,17 +1017,21 @@ LimpaPerifericos:
     PUSH R2
     PUSH R3
     PUSH R4
+    PUSH R5
     
     MOV R0, ON_OFF
     MOV R1, OK
     MOV R2, Opcao
     MOV R3, Dinheiro
-    MOV R4, 0
-    MOVB [R0], R4
-    MOVB [R1], R4
-    MOVB [R2], R4
-    MOVB [R3], R4
+    MOV R4, Escrita
+    MOV R5, 0
+    MOVB [R0], R5
+    MOVB [R1], R5
+    MOVB [R2], R5
+    MOVB [R3], R5
+    MOVB [R4], R5
 
+    POP R5
     POP R4
     POP R3
     POP R2
