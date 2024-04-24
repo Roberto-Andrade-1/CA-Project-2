@@ -2,27 +2,37 @@
 ;                               Periferico de entrada
 ;------------------------------------------------------------------------------------
 
-ON_OFF          EQU 0020H ; Onde o utilizador ira ligar a maquina
-OK              EQU 0030H ; Onde o utilizador ira selecionar o OK
-Opcao           EQU 0040H ; Onde o utilizador ira escolher a opcao
-Dinheiro        EQU 0050H ; Onde o utilizador ira introduzir as moedas/notas
-Escrita         EQU 0060H ; Onde o utilizador ira introduzir a passe do stock ou o nº
-                          ; de pepe
+PER_EN           EQU 0040H ; Onde o utilizador ira introduzir as suas escolhas e inputs 
 
 ;------------------------------------------------------------------------------------
 ;              Labels para quem usar saber onde inserir os valores
+;               e tambem saber onde estao os valores de cada coisa
 ;------------------------------------------------------------------------------------
 
-Place 0028H
-String "ON_OFF" 
-Place 0038H
-String "OK"
 Place 0048H
-String "Opcao"
-Place 0058H
-String "Dinheiro"
-Place 0068H
-String "Escrita"
+String "PER_EN"
+Place 0126H
+String "PEPEs"
+Place 0136H
+String "TotalPagar"
+Place 0146H
+String "Notas 5"
+Place 0156H
+String "Moedas 2"
+Place 0166H
+String "Moedas 1"
+Place 0176H
+String "Moedas 50"
+Place 0186H
+String "Moedas 20"
+Place 0196H
+String "Moedas 10"
+Place 01A6H
+String "TotalPosto"
+Place 01B6H
+String "Troco"
+Place 01C6H
+String "MoedaAtual"
 
 ;-------------------------------------------------------------------------------------
 ;                                Periferico de saida
@@ -66,6 +76,8 @@ Valor10Cent     EQU 10
 
 stackPointer    EQU 0000H
 
+NumTotalCarater EQU 4
+
 
 ;--------------------------------------------------------------------------------------
 ;    Base de dados, aqui ficarao os enderecos onde irá ser guardada as informacoes
@@ -85,6 +97,7 @@ QuantidadeMoedas20  EQU 0180H       ; endereco onde fica guardado o total de moe
 QuantidadeMoedas10  EQU 0190H       ; endereco onde fica guardado o total de moedas de 10
 DinheiroInserido    EQU 01A0H       ; endereco onde fica guardado o montade que o usuario inseriu com moedas
 TrocoAdevolver      EQU 01B0H       ; endereco onde fica guardado o troco a devolver ao utilizador
+DinheiroAtualInserido EQU 01C0H     ; endereco onde fica guardado a moeda que foi inserida agora
 BaseDeDados         EQU 2000H       ; endereco onde vao ficar guardados os numeros de pepe e o seu saldo
 FimBaseDeDados      EQU 2070H       ; endereco do fim da base de dados
 
@@ -115,8 +128,8 @@ MenuCompra:
 Place 02D0H
 MenuTalao:
     String "  PEPE  GERADO  "
-    String "      000       "
-    String "TROCO:   0.00   "
+    String "                "
+    String "TROCO:    .     "
     String "                "
     String "                "
     String "                "
@@ -136,7 +149,7 @@ Place 03D0H
 MenuCompraPEPE:
     String "   SALDO PEPE   "
     String "                "
-    String "        00.00   "
+    String "       .        "
     String "                "
     String "1-Comprar       "
     String "2-Recarregar    "
@@ -146,28 +159,28 @@ Place 0450H
 MenuStock1:
     String "-- Stock 1/3 -- "
     String "Notas  5 Euro:  "
-    String "  000           "
+    String "                "
     String "Moeda  2 Euro:  "
-    String "  000           "
-    String "Moeda  1 Euro:  "
+    String "                "
+    String "                "
     String "1-Seguinte      "
 
 Place 04D0H
 MenuStock2:
     String "-- Stock 2/3 -- "
-    String "  000           "
+    String "Moeda  1 Euro:  "
+    String "                "
     String "Moeda 50 Cent:  "
-    String "  000           "
-    String "Moeda 20 Cent:  "
-    String "  000           "
+    String "                "
+    String "                "
     String "1-Seguinte      "
 
 Place 0550H
 MenuStock3:
     String "-- Stock 3/3 -- "
-    String "Moeda 10 Cent:  "
-    String "  000           "
+    String "Moeda 20 Cent:  "
     String "                "
+    String "Moeda 10 Cent:  "
     String "                "
     String "                "
     String "2-Voltar        "
@@ -209,14 +222,14 @@ DisplayMaisBilhetes:
     String "      MAIS      "
     String "    BILHETES?   "
     String "                "
-    String "   OK-1(SIM)    "
-    String "   OK-2(NAO)    "
+    String "   1- SIM       "
+    String "   2- NAO       "
 
 Place 07D0H
 DisplayTotalPagar:
     String "     TOTAL      "
     String "                "
-    String "     00.00      "
+    String "       .        "
     String "                "
     String " INSIRA MOEDAS  "
     String "   E  DEPOIS    "
@@ -226,7 +239,7 @@ Place 0850H
 DisplayTotalPagarCartao:
     String "     TOTAL      "
     String "                "
-    String "     00.00      "
+    String "       .        "
     String "                "
     String " IREMOS RETIRAR "
     String "    DO SALDO    "
@@ -302,6 +315,16 @@ EcraRecarregar:
     String "   E  DEPOIS    "
     String "OK PRA CONTINUAR"
 
+Place 0C50H
+saldoInsuficiente:
+    String "                "
+    String "    NAO TEM     "
+    String "     SALDO      "
+    String "   SUFICIENTE   "
+    String "                "
+    String "                "
+    String "OK PRA CONTINUAR"
+
 ;--------------------------------------------------------------------
 ;                             Inicio do programa
 ;--------------------------------------------------------------------
@@ -317,7 +340,7 @@ Principio:
     MOV SP, stackPointer        ; stack pointer inicializada com o endereço fornecido nas variaveis
     CALL LimpaDisplay           ; chama a rotina de limpar o display para ficar todo em branco
     CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
-    MOV R0, ON_OFF              ; guarda no R0 o endereço do periferico de entrada de ligar e desligar a maquina
+    MOV R0, PER_EN              ; guarda no R0 o endereço do periferico de entrada de ligar e desligar a maquina
 
 LeOnOff:
     MOVB R1, [R0]               ; guarda em R1 o valor introduzido no periferico de entrada
@@ -330,7 +353,7 @@ Ligado:
     CALL LimpaPerifericos       ; chama a rotina que limpa os perifericos de entrada
 
 LeOpcao:
-    MOV R0, Opcao               ; guarda no R0 o endereco da opcao
+    MOV R0, PER_EN               ; guarda no R0 o endereco da opcao
     MOVB R1, [R0]               ; guarda no R1, o valor que esta no endereco de R0
 
     CMP R1, 0                   ; compara com 0 
@@ -370,7 +393,7 @@ RotinaComprar2:
     CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
 
 LeOpcaoCompra:
-    MOV R0, Opcao               ; guarda em R0 o endereco da Opcao
+    MOV R0, PER_EN               ; guarda em R0 o endereco da Opcao
     MOVB R1, [R0]               ; guarda em R1 o valor que esta no endereco
 
     CMP R1, 0                   ; se for 0 fica em loop
@@ -436,7 +459,7 @@ ecraMaisBilhetes:
     CALL MostraDisplay          ; chama a rotina de mostar display
     CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
 LeOpcaoBilhetes:
-    MOV R0, OK                  ; guarda em R0 o endereco de perfiferico de entrada OK
+    MOV R0, PER_EN                  ; guarda em R0 o endereco de perfiferico de entrada OK
     MOVB R1, [R0]               ; guarda em R1 o valor do periferico de entrada
 
     CMP R1, 0                   ; compara se o valor e 0
@@ -460,13 +483,17 @@ RotinaPagamento:
     MOV R1, [R0]                ; R1 vai guardar o valor no endereco de memoria de R0
     MOV R3, DinheiroInserido    ; R3 guarda o endereço do dinheiro total inserido
     MOV R4, 0                   ; R4 vai ter o total inserido pelo user 
+    MOV R3, DinheiroAtualInserido
+    MOV R0, [R3]
 RotinaPagamento2:
     MOV R2, DisplayTotalPagar   ; guarda em R2 o endereco do display que mostra o total a pagar
     CALL MostraDisplay          ; chama a rotina de mostrar o display
-RotinaPagamento3:
+    MOV R2, 00B5H
+    CALL converter
     CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
-    MOV R2, Dinheiro            ; guarda em R2 o endereco do periferico de entrada Dinheiro
-    MOVB R6, [R2]               ; guarda em R6 o valor do periferico de entrada Dinheiro
+RotinaPagamento3:
+    MOV R5, PER_EN              ; guarda em R2 o endereco do periferico de entrada Dinheiro
+    MOVB R6, [R5]               ; guarda em R6 o valor do periferico de entrada Dinheiro
     MOV R8, 50H                 ; guarda em R8 o valor 50 em hexadecimal
     MOV R9, 20H                 ; guarda em R9 o valor 20 em hexadecimal 
     MOV R10, 10H                ; guarda em R10 o valor 10 em hexadecimal
@@ -497,68 +524,74 @@ RotinaPagamento3:
 inseriu5euros:
     MOV R8, Valor5Euros
     ADD R4, R8                  ; adiciona o valor 500 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeNotas5
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu2euros:
     MOV R8, Valor2Euros
     ADD R4, R8                  ; adiciona o valor 200 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeMoedas2
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu1euros:
     MOV R8, Valor1Euro
     ADD R4, R8                  ; adiciona o valor 100 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeMoedas1
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu50cent:
     MOV R8, Valor50Cent
     ADD R4, R8                  ; adiciona o valor 50 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeMoedas50
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu20cent:
     MOV R8, Valor20Cent
     ADD R4, R8                  ; adiciona o valor 20 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeMoedas20
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu10cent:
     MOV R8, Valor10Cent
     ADD R4, R8                  ; adiciona o valor 10 a variavel R4 (total inserido pelo user)
+    MOV R0, R8
     MOV R5, QuantidadeMoedas10
-    MOV R7 , [R5]
+    MOV R7, [R5]
     ADD R7, 1
     MOV [R5], R7
 
 AdicionaValor:
+    MOV R3, DinheiroAtualInserido
+    MOV [R3], R0
+    MOV R3, DinheiroInserido
     MOV [R3], R4                ; adiciona no espaco de memoria do dinheiro total inserido o valor de R4
     MOV R4, [R3]                ; R4 vai ficar com o valor que tem no espaco de memoria de R3
 ConfirmarPagamento:
-    MOV R5, OK                  ; guarda em R5 o endereco do periferico de entrada OK
-    MOVB R7, [R5]               ; guarda em R7 o valor do periferico de entrada OK
-    CMP R7, 0                   ; fica em loop a espera do per. de entrada
-    JEQ ConfirmarPagamento      
-    CMP R7, 1                   ; se OK for clicado passa para a etiqueta Final, onde vai ser gerado o PEPE
-    JEQ Final
-    CALL RotinaErro             ; caso contrario nao foi um valor aceite e volta para o ConfirmarPagamento
-    JMP ConfirmarPagamento
+    SUB R1, R0
+    CMP R1, 0
+    JLE Final
+    JMP RotinaPagamento2
 
 Final:
+    MOV R0, TotalPagar          ; R0 vai guaradr o endereco de total a pagar
+    MOV R1, [R0]                ; R1 vai guardar o valor no endereco de memoria de R0
     CMP R4, R1                  ; compara a ver se o valor total introduzido e igual ou superior ao total a pagar
     JGE CriarPEPE               ; se sim salta para a rotina de criar o PEPE
-    JMP RotinaPagamento2        ; se nao salta para a rotina de pagamento 2 para introduzir mais moedas
 
 
 ;----------------------------------------
@@ -595,10 +628,23 @@ NovoPEPE:
     MOV [R2], R6                ; guarda o valor do total a pagar
     MOV [R0], R1                ; adiciona a variavel numero de pepes o numero atual de pepes gerados
     CALL LimpaPerifericos       ; limpa os perifericos 
-    CALL MostraTalao            ; chama a rotina de mostrar o talao, com o troco e o pepe gerado
-    
+    MOV R2, MenuTalao
+    CALL MostraDisplay          ; chama a rotina de mostrar o talao, com o troco e o pepe gerado
+    MOV R2, 00B8H
+    MOV R3, TrocoAdevolver
+    MOV R1, [R3]
+    CALL converter
+loopPEPE:
+    MOV R0, PER_EN
+    MOVB R1, [R0]
+    CMP R1, 0
+    JEQ loopPEPE
+    CMP R1, 1
+    JEQ fimPEPE
+    CALL RotinaErro
+    JEQ loopPEPE
+fimPEPE:
     JMP Ligado
-
 
 
 ;------------------------------------------------------------------------------------------------
@@ -618,7 +664,7 @@ loopCartao:
     MOV R1, [R0]                ; R1 fica com o valor que esta na base de dados
     MOV R2, FimBaseDeDados      ; R2 guarda o endereco do fim da base de dados
 
-    MOV R6, Escrita          ; R6 guarda o endereco do per. de entrada para introducao do num de pepe
+    MOV R6, PER_EN          ; R6 guarda o endereco do per. de entrada para introducao do num de pepe
     MOVB R7, [R6]               ; R7 fica com o valor que foi inserido no per. de entrada
 
     CMP R7, 0                   ; compara a ver se e zero
@@ -640,8 +686,12 @@ rotinaUsarCartao:
     MOV R2, MenuCompraPEPE      ; guarda em R2 o endereco do display de opcoes do cartao
     CALL MostraDisplay          ; chama a rotina de usar cartao
     CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
+    MOV R2, 00B5H
+    ADD R0, 4
+    MOV R1, [R0]  
+    CALL converter
 opcaoCartao:
-    MOV R0, Opcao               ; R0 guarda o endereco do per. de entrada Opcao
+    MOV R0, PER_EN               ; R0 guarda o endereco do per. de entrada Opcao
     MOVB R1, [R0]               ; R1 guarda o valor introduzido no per. de entrada
 
     CMP R1, 0                   ; compara com 0, se for fica em loop
@@ -670,7 +720,7 @@ RotinaComprarCartao2:
     CALL LimpaPerifericos       ; chama a rotina de limpar os perifericos
 
 LeOpcaoCompraCartao:
-    MOV R0, Opcao               ; guarda em R0 o endereco da Opcao
+    MOV R0, PER_EN               ; guarda em R0 o endereco da Opcao
     MOVB R1, [R0]               ; guarda em R1 o valor que esta no endereco
 
     CMP R1, 0                   ; se for 0 fica em loop
@@ -735,7 +785,7 @@ ecraMaisBilhetesCartao:
     CALL MostraDisplay          ; chama a rotina de mostar display
     CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
 LeOpcaoBilhetesCartao:
-    MOV R0, OK                  ; guarda em R0 o endereco de perfiferico de entrada OK
+    MOV R0, PER_EN                  ; guarda em R0 o endereco de perfiferico de entrada OK
     MOVB R1, [R0]               ; guarda em R1 o valor do periferico de entrada
 
     CMP R1, 0                   ; compara se o valor e 0
@@ -748,7 +798,7 @@ LeOpcaoBilhetesCartao:
     JEQ RotinaPagamentoCartao   ; se sim salta para a rotina de pagamento dos bilhetes
 
     CALL RotinaErro             ; se nao e nenhum dos outros chama a rotina de erro 
-    JMP Ligado                  ; e salta para o ligado
+    JMP LeOpcaoBilhetesCartao   ; e salta para o ligado
 
 ;-------------------------------
 ; Rotina de pagamento com cartao
@@ -763,7 +813,8 @@ RotinaPagamentoCartao2:
     MOV R6, FimBaseDeDados      ;
     MOV R2, DisplayTotalPagarCartao
     CALL MostraDisplay
-
+    MOV R2, 00B5H
+    CALL converter
     CMP R4, R7                  ; R7 tem o num de PEPE a ser usado agora compara com o que tem na base de dados a ver se é o mesmo
     JEQ SegueCompra             ; se o numero de cartao existe prossegue a compra
     MOV R5, 16                  ; guarda em R5 o valor 16 para mover para o proximo endereco de mem
@@ -778,9 +829,21 @@ SegueCompra:
     JGE SaldoSuficiente         ; se esse valor for maior ou igual ao total a pagar segue para a etiqueta saldo suficiente
     MOV R1, 0                   ; guarda em R1 o valor 0
     MOV [R0], R1                ; limpa os valores que estao no total a pagar
-    MOV R2, EcraErro            ; mostra que nao tem saldo suficiente para a compra ser realizada
+loopInsuficiente:
+    MOV R2, saldoInsuficiente             ; mostra que nao tem saldo suficiente para a compra ser realizada
     CALL MostraDisplay          ; aqui vai ficar a espera do ok
-    JMP rotinaUsarCartao        ; volta para as opcoes do cartao
+    CALL LimpaPerifericos
+loopInsuficiente2:
+    MOV R0, PER_EN
+    MOVB R1, [R0]
+    CMP R1, 0
+    JEQ loopInsuficiente2
+    CMP R1, 1
+    JEQ voltaInsuficiente
+    CALL RotinaErro
+    JMP loopInsuficiente
+voltaInsuficiente:
+    JMP  RotinaCartao           ; volta a pedir para introduzir o cartao
     
 SaldoSuficiente:
     SUB R4, R1                  ; retira do saldo o valor a pagar
@@ -817,8 +880,8 @@ CartaoCorreto:
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopRecaregar:
-    MOV R0, Dinheiro            ; guarda em R0 o endereco do per. de entrada
-    MOV R2, [R0]                ; R2 guarda o valor que esta no per. de entrada
+    MOV R0, PER_EN            ; guarda em R0 o endereco do per. de entrada
+    MOVB R2, [R0]                ; R2 guarda o valor que esta no per. de entrada
     MOV R5, 50H                 ;
     MOV R6, 20H                 ;
     MOV R7, 10H                 ;
@@ -839,7 +902,7 @@ loopRecaregar:
     JEQ pos10cent
 
     CALL RotinaErroMoeda        ; se nao nao introduziu nenhuma moeda
-    JMP loopRecaregar           ; e volta para a etiqueta de introduzir moedas
+    JMP CartaoCorreto           ; e volta para a etiqueta de introduzir moedas
 
 pos5euros:
     MOV R4, Valor5Euros
@@ -893,9 +956,10 @@ pos10cent:
 poeNaMemoria:
     MOV [R8], R3
     MOV R3, [R8]
+    CALL LimpaPerifericos
 confirmaCarregamento:
-    MOV R2, OK
-    MOV R4, [R2]
+    MOV R2, PER_EN
+    MOVB R4, [R2]
     CMP R4, 0
     JEQ confirmaCarregamento
     CMP R4, 1
@@ -924,7 +988,7 @@ passStock:
     CALL LimpaPerifericos
 passStock2:
     MOVB R2, [R0]
-    MOV R3, Escrita
+    MOV R3, PER_EN
     MOVB R4, [R3]
 
     CMP R4, 0
@@ -940,7 +1004,7 @@ loopStock:
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopStock2:
-    MOV R0, Opcao
+    MOV R0, PER_EN
     MOVB R1, [R0]
 
     CMP R1, 0
@@ -968,13 +1032,16 @@ reporStock:
     MOV R5, 20H
     MOV R6, 10H
 loopRepor:
-    MOV R0, Dinheiro
+    MOV R0, PER_EN ; moeda
     MOVB R1, [R0]
-    MOV R2, Escrita
-    MOVB R3, [R2]
 
     CMP R1, 0 
     JEQ loopRepor
+
+    CALL LimpaPerifericos
+    MOV R2, PER_EN   ; quantidade
+    MOVB R3, [R2]
+
     CMP R3, 0
     JEQ loopRepor
 
@@ -1050,7 +1117,7 @@ verStock:
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopVerStock:
-    MOV R0, Opcao
+    MOV R0, PER_EN
     MOVB R1, [R0]
 
     CMP R1, 0
@@ -1065,7 +1132,7 @@ verStock2:
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopVerStock2:
-    MOV R0, Opcao
+    MOV R0, PER_EN
     MOVB R1, [R0]
 
     CMP R1, 0
@@ -1080,7 +1147,7 @@ verStock3:
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopVerStock3:
-    MOV R0, Opcao
+    MOV R0, PER_EN
     MOVB R1, [R0]
 
     CMP R1, 0
@@ -1141,55 +1208,17 @@ Ciclo_Display:
     POP R0 
     RET
 
-;--------------------
-; Rotina Mostra Talao
-;--------------------
-MostraTalao:
-    PUSH R2
-    PUSH R1
-    PUSH R0
-
-    MOV R2, MenuTalao
-    CALL MostraDisplay
-    CALL LimpaPerifericos
-CicloTalao:
-    MOV R0, OK
-    MOVB R1, [R0]
-    CMP R1, 1
-    JNE CicloTalao
-
-    POP R0
-    POP R1
-    POP R2
-    RET 
-
 ;------------------------
 ;Rotina Limpa Perifericos
 ;------------------------
 LimpaPerifericos:
     PUSH R0
-    PUSH R1
-    PUSH R2
-    PUSH R3
-    PUSH R4
-    PUSH R5
+    PUSH R1 
     
-    MOV R0, ON_OFF
-    MOV R1, OK
-    MOV R2, Opcao
-    MOV R3, Dinheiro
-    MOV R4, Escrita
-    MOV R5, 0
-    MOVB [R0], R5
-    MOVB [R1], R5
-    MOVB [R2], R5
-    MOVB [R3], R5
-    MOVB [R4], R5
+    MOV R0, PER_EN
+    MOV R1, 0
+    MOVB [R0], R1
 
-    POP R5
-    POP R4
-    POP R3
-    POP R2
     POP R1
     POP R0
     RET
@@ -1204,9 +1233,9 @@ RotinaErro:
 
     MOV R2, EcraErro
     CALL MostraDisplay
-    CALL LimpaPerifericos
 CicloErro:
-    MOV R0, OK
+    CALL LimpaPerifericos
+    MOV R0, PER_EN
     MOVB R1, [R0]
     CMP R1, 1
     JNE CicloErro
@@ -1228,7 +1257,7 @@ RotinaErroMoeda:
     CALL MostraDisplay
     CALL LimpaPerifericos
 CicloErroMoeda:
-    MOV R0, OK
+    MOV R0, PER_EN
     MOVB R1, [R0]
     CMP R1, 1
     JNE CicloErroMoeda
@@ -1250,7 +1279,7 @@ rotinaNaoExistePepe:
     CALL MostraDisplay
     CALL LimpaPerifericos
 CicloErroPepe:
-    MOV R0, OK
+    MOV R0, PER_EN
     MOVB R1, [R0]
     CMP R1, 1
     JNE CicloErroPepe
@@ -1258,6 +1287,63 @@ CicloErroPepe:
     POP R0
     POP R1
     POP R2
+    RET
+
+;------------------------------------------
+; Rotina de conversao para ASCII no display
+;------------------------------------------
+
+converter:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+
+    MOV R0, 10          ; R1 = 10 para realizar as operacoes de divisao
+    ADD R2, 4           ; fica com o endereco do caracter a ser preenchido
+    MOV R3, 0           ; R3 = 0 numero de caracteres ja preenchidos
+    MOV R5, 48
+proximoCaracter:
+    MOV R4, R1          ; faz uma copia de R1 pra R4 (R4 = X)
+    MOD R4, R0          ; R4 = D = (resto) R4/R1 = (resto) X/10
+    DIV R1, R0          ; R1 = X = R1/R0 = X/10
+    ADD R4, R5          ; C = R4 = R4 + R5
+    MOVB [R2], R4       ; guarda o C no Display
+    ADD R3, 1           ; Atualiza o num de caracteres ja preenchidos
+    SUB R2, 1           ; Passa para o proximo espaco do display
+    CMP R3, 2
+    JEQ saltaCaracter
+    CMP R1, 0           ; verifica se o X ja e zero
+    JNE proximoCaracter 
+    JMP cicloVazios
+saltaCaracter:
+    SUB R2, 1
+    JMP proximoCaracter
+cicloVazios:
+    CMP R3, NumTotalCarater
+    JEQ fimRotina
+    MOV R6, 30H
+    MOVB [R2], R6
+    ADD R3, 1           ; Atualiza o num de caracteres ja preenchidos
+    SUB R2, 1           ; Passa para o proximo espaco do display
+    CMP R3, 2
+    JEQ saltaVazio
+    JMP cicloVazios
+saltaVazio:
+    SUB R2, 1
+    JMP cicloVazios
+
+fimRotina:
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    POP R0
     RET
 
 
