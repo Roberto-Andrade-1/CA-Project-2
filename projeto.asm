@@ -292,6 +292,15 @@ EcraRepor:
     String "   QUANTIDADE   "
     String "   NO ESCRITA   "
 
+Place 0BD0H
+EcraRecarregar:
+    String "                "
+    String " INSIRA MOEDAS  "
+    String " PARA CARREGAR  "
+    String "    O CARTAO    "
+    String "                "
+    String "   E  DEPOIS    "
+    String "OK PRA CONTINUAR"
 
 ;--------------------------------------------------------------------
 ;                             Inicio do programa
@@ -331,15 +340,19 @@ LeOpcao:
     JEQ RotinaComprar           ; entao salta para a rotina de comprar
 
     CMP R1, UsarCartao          ; se o valor for igual a UsarCartao (2)
-    JEQ SaltoUsarCartao            ; entao salta para a rotina de usar cartao
+    JEQ UsarCartaoIntermedio    ; entao salta para a rotina de usar cartao
 
     CMP R1, Stock               ; se o valor for igual a Stock (3)
-    JEQ SaltoStock             ; entao salta para a rotina de stock
+    JEQ StockIntermedio         ; entao salta para a rotina de stock
 
     CALL RotinaErro             ; se nao for nenhuma das disponiveis chama a rotina de erro
     JMP Ligado                  ; e volta ao Ligado
 
+UsarCartaoIntermedio:
+    JMP RotinaCartao
 
+StockIntermedio:
+    JMP RotinaStock
 
 ;---------------------------------------------------------------------------
 ;    Rotinas para comprar bilhete sem cartão, ao comprar bilhetes desta
@@ -438,19 +451,6 @@ LeOpcaoBilhetes:
     CALL RotinaErro             ; se nao e nenhum dos outros chama a rotina de erro 
     JMP Ligado                  ; e salta para o ligado
 
-;--------------------------------------------------------------------------------------------
-;                           Saltos a meio para nao ficar out of bounds
-;--------------------------------------------------------------------------------------------
-
-SaltoUsarCartao:
-    JMP RotinaCartao
-
-SaltoStock:
-    JMP RotinaStock
-
-;--------------------------------------------------------------------------------------------
-;                               Fim dos saltos a meio do programa
-;--------------------------------------------------------------------------------------------
 
 ;-----------------
 ; Rotina Pagamento
@@ -494,33 +494,53 @@ RotinaPagamento3:
     CALL RotinaErroMoeda        ; se nao for nenhum destes valores significa que nao e uma moeda e chama a rotina de erro de moedas
     JMP RotinaPagamento2        ; volta para a parte de inserir moedas
 
-;------------------
-; NESTA PARTE FALTA ADICIONAR CADA MOEDA INSERIDA AO STOCK DA MAQUINA!!!!!!!!!!!!!!!!!!1
-;------------------
-
 inseriu5euros:
     MOV R8, Valor5Euros
     ADD R4, R8                  ; adiciona o valor 500 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeNotas5
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu2euros:
     MOV R8, Valor2Euros
     ADD R4, R8                  ; adiciona o valor 200 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeMoedas2
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu1euros:
     MOV R8, Valor1Euro
     ADD R4, R8                  ; adiciona o valor 100 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeMoedas1
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu50cent:
     MOV R8, Valor50Cent
     ADD R4, R8                  ; adiciona o valor 50 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeMoedas50
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu20cent:
     MOV R8, Valor20Cent
     ADD R4, R8                  ; adiciona o valor 20 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeMoedas20
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
     JMP AdicionaValor           ; salta para a etiquita que vai adicionar na memoria esse valor
 inseriu10cent:
     MOV R8, Valor10Cent
     ADD R4, R8                  ; adiciona o valor 10 a variavel R4 (total inserido pelo user)
+    MOV R5, QuantidadeMoedas10
+    MOV R7 , [R5]
+    ADD R7, 1
+    MOV [R5], R7
 
 AdicionaValor:
     MOV [R3], R4                ; adiciona no espaco de memoria do dinheiro total inserido o valor de R4
@@ -579,8 +599,8 @@ NovoPEPE:
     
     JMP Ligado
 
-;------------------------------------------------------------------------------------------------
-;
+
+
 ;------------------------------------------------------------------------------------------------
 ;                          Rotina de pagamento com cartao e recarregar cartao
 ;------------------------------------------------------------------------------------------------
@@ -613,22 +633,10 @@ loopCartao:
     CALL rotinaNaoExistePepe    ; caso contrario esse PEPE nao existe no sistema e volta para a etiqueta de rotina usar cartao
     JMP RotinaCartao
 
-;--------------------
-; Rotina de Continuar
-;--------------------
+;----------------------
+; Rotina de Usar Cartao
+;----------------------
 rotinaUsarCartao:
-    CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
-loopRotinaUsarCartao:    
-    MOV R0, Opcao               ; guarda em R0 o endereco do per. de entrada Opcao
-    MOVB R1, [R0]               ; R1 guarda o valor inserido no per. de entrada
-    CMP R1, 0                   ; se R1 for igual a zero fica em loop
-    JEQ loopRotinaUsarCartao
-    CMP R1, Continuar           ; se for igual a Continuar salta para a rotina de usar cartao 2
-    JEQ rotinaUsarCartao2       
-    CALL RotinaErro             ; se nao e uma opcao valida chama a rotina de erro e volta para a rotina de usar cartao
-    JEQ rotinaUsarCartao
-
-rotinaUsarCartao2:
     MOV R2, MenuCompraPEPE      ; guarda em R2 o endereco do display de opcoes do cartao
     CALL MostraDisplay          ; chama a rotina de usar cartao
     CALL LimpaPerifericos       ; chama a rotina de limpar perifericos
@@ -645,7 +653,7 @@ opcaoCartao:
     CMP R1, Cancelar            ; se for iguala Cancelar salta para a rotina de Ligado
     JEQ LigadoIntermedio
     CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
-    JMP rotinaUsarCartao2
+    JMP rotinaUsarCartao
 
 LigadoIntermedio:
     JMP Ligado
@@ -681,13 +689,11 @@ LeOpcaoCompraCartao:
     JEQ RotinaMaisBilhetesCartao; salta para a rotina de mais bilhetes
 
     CMP R1, Cancelar            ; se for igual a Cancelar (5)
-    JEQ LigadoIntermedio2                 ; volta para o Ligado                 TA A DAR OUT OF BOUND AQUI
+    JEQ rotinaUsarCartao        ; 
 
     CALL RotinaErro             ; se nao for nenhuma das opcoes chama a rotina de erro
     JMP RotinaComprarCartao2    ; e volta para a rotina de comprar 2
 
-LigadoIntermedio2:
-    JMP Ligado
 
 ;---------------------
 ; Rotina mais bilhetes
@@ -774,7 +780,7 @@ SegueCompra:
     MOV [R0], R1                ; limpa os valores que estao no total a pagar
     MOV R2, EcraErro            ; mostra que nao tem saldo suficiente para a compra ser realizada
     CALL MostraDisplay          ; aqui vai ficar a espera do ok
-    JMP rotinaUsarCartao2       ; volta para as opcoes do cartao
+    JMP rotinaUsarCartao        ; volta para as opcoes do cartao
     
 SaldoSuficiente:
     SUB R4, R1                  ; retira do saldo o valor a pagar
@@ -807,7 +813,7 @@ CartaoCorreto:
     MOV R3, 0                   ; vai guardar o total inserido
     MOV R8, DinheiroInserido
     MOV [R8], R3
-    MOV R2, EcraErro; MUDAR PARA O CORRETO!!!!!
+    MOV R2, EcraRecarregar
     CALL MostraDisplay
     CALL LimpaPerifericos
 loopRecaregar:
@@ -838,26 +844,51 @@ loopRecaregar:
 pos5euros:
     MOV R4, Valor5Euros
     ADD R3, R4
+    MOV R5, QuantidadeNotas5
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
     JMP poeNaMemoria
 pos2euros:
     MOV R4, Valor2Euros
     ADD R3, R4
+    MOV R5, QuantidadeMoedas2
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
     JMP poeNaMemoria
 pos1euro:
     MOV R4, Valor1Euro
     ADD R3, R4
+    MOV R5, QuantidadeMoedas1
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
     JMP poeNaMemoria
 pos50cent:
     MOV R4, Valor50Cent
     ADD R3, R4
+    MOV R5, QuantidadeMoedas50
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
     JMP poeNaMemoria
 pos20cent:
     MOV R4, Valor20Cent
     ADD R3, R4
+    MOV R5, QuantidadeMoedas20
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
     JMP poeNaMemoria
 pos10cent:
     MOV R4, Valor10Cent
     ADD R3, R4
+    MOV R5, QuantidadeMoedas10
+    MOV R6 , [R5]
+    ADD R6, 1
+    MOV [R5], R6
+
 
 poeNaMemoria:
     MOV [R8], R3
@@ -1228,3 +1259,25 @@ CicloErroPepe:
     POP R1
     POP R2
     RET
+
+
+;------------------------------------------------------
+; Rotina para escrever no ecra o total que tem de pagar
+;------------------------------------------------------
+rotinaEscreveTotalPagar:
+
+    RET 
+
+
+;---------------------------------------------------
+; Rotina para escrever no ecra o pepe que foi gerado 
+;---------------------------------------------------
+rotinaEscrevePepeGerado:
+    
+    
+    RET 
+
+;------------------
+; Rotina para escrever no ecra o troco a devolver 
+;
+
