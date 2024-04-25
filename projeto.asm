@@ -699,7 +699,7 @@ opcaoCartao:
     CMP R1, Comprar             ; se for igual a Comprar salta para a rotina de comprar com cartao
     JEQ RotinaComprarCartao
     CMP R1, Recarregar          ; se for igual a Recarregar salta para a rotina de recarregar o cartao
-    JEQ RotinaRecarregar
+    JEQ recarregarIntermedio
     CMP R1, Cancelar            ; se for iguala Cancelar salta para a rotina de Ligado
     JEQ LigadoIntermedio
     CALL RotinaErro             ; caso contrario nao e uma opcao valida e chama a rotina de erro para o pepe
@@ -708,6 +708,8 @@ opcaoCartao:
 LigadoIntermedio:
     JMP Ligado
 
+recarregarIntermedio:
+    JMP RotinaRecarregar
 
 ;-----------------------------
 ; Rotina de comprar com cartao
@@ -816,13 +818,24 @@ RotinaPagamentoCartao2:
     MOV R2, 00B5H
     CALL converter
     CMP R4, R7                  ; R7 tem o num de PEPE a ser usado agora compara com o que tem na base de dados a ver se é o mesmo
-    JEQ SegueCompra             ; se o numero de cartao existe prossegue a compra
+    JEQ SegueCompra1             ; se o numero de cartao existe prossegue a compra
     MOV R5, 16                  ; guarda em R5 o valor 16 para mover para o proximo endereco de mem
     ADD R3, R5                  ; vai para o proximo endereco de mem da base de dados
     CMP R3, R6                  ; compara a ver se chegou ao fim da base de dados
     JNE RotinaPagamentoCartao2  ; se não chegou ao fim volta para o rotina pagamento cartao 2
-
+SegueCompra1:
+    CALL LimpaPerifericos
 SegueCompra:
+    MOV R9, PER_EN
+    MOVB R10, [R9]
+    CMP R10, 0
+    JEQ SegueCompra
+    CMP R10, 1
+    JEQ continuacao
+    CALL RotinaErro
+    JMP SegueCompra1
+
+continuacao:
     ADD R3, 4                   ; aumenta 4 ao endereco onde esta a base de dados que e onde contem o saldo do cartao
     MOV R4, [R3]                ; R4 guarda o valor que esta no endereco
     CMP R4, R1                  ; compra o valor que tem em R4 com R1 (total a pagar)
@@ -844,7 +857,7 @@ loopInsuficiente2:
     JMP loopInsuficiente
 voltaInsuficiente:
     JMP  RotinaCartao           ; volta a pedir para introduzir o cartao
-    
+
 SaldoSuficiente:
     SUB R4, R1                  ; retira do saldo o valor a pagar
     MOV [R3], R4                ; atualiza o saldo na base de dados
@@ -852,9 +865,25 @@ SaldoSuficiente:
     MOV [R0], R1                ; limpa os valores que estao no total a pagar
     MOV R2, EcraSucesso         ; compra feita com sucesso e mostrar o saldo atual do cartao
     CALL MostraDisplay
-    JMP Ligado
+loopConfirmar:
+    CALL LimpaPerifericos
+loopConfirmar2:
+    MOV R0, PER_EN
+    MOVB R1, [R0]
+    CMP R1, 0
+    JEQ loopConfirmar2
+    CMP R1, 1
+    JEQ prosseguir
+    CALL RotinaErro
+    JMP loopConfirmar
 
+prosseguir:
+    MOV R2, 00B5H
+    MOV R1, [R3]
 
+    SUB R3, 4
+    MOV R0, R3
+    JMP rotinaUsarCartao
 
 ;------------------------------
 ; Rotina de recarregar o cartao
@@ -884,7 +913,7 @@ loopRecaregar:
     MOVB R2, [R0]                ; R2 guarda o valor que esta no per. de entrada
     MOV R5, 50H                 ;
     MOV R6, 20H                 ;
-    MOV R7, 10H                 ;
+    MOV R1, 10H                 ;
 
     CMP R2, 0                   ; compara com 0, se for igual fica em loop
     JEQ loopRecaregar
@@ -898,7 +927,7 @@ loopRecaregar:
     JEQ pos50cent
     CMP R2, R6                  ; se for igual a 20 introduziu uma moeda de 20
     JEQ pos20cent
-    CMP R2, R7                  ; se for igual a 10 introduziu uma moeda de 10
+    CMP R2, R1                  ; se for igual a 10 introduziu uma moeda de 10
     JEQ pos10cent
 
     CALL RotinaErroMoeda        ; se nao nao introduziu nenhuma moeda
@@ -916,7 +945,7 @@ pos2euros:
     MOV R4, Valor2Euros
     ADD R3, R4
     MOV R5, QuantidadeMoedas2
-    MOV R6 , [R5]
+    MOV R6, [R5]
     ADD R6, 1
     MOV [R5], R6
     JMP poeNaMemoria
@@ -968,10 +997,25 @@ confirmaCarregamento:
     JMP confirmaCarregamento
 
 finalCarregamento:
+    MOV R0, BaseDeDados
+nextCartao:
+    MOV R1, [R0]
+    MOV R5, FimBaseDeDados
+
+    CMP R7, R1
+    JEQ aumentaSaldo
+    MOV R4, 16                  ; guarda em R5 o valor 16 para mover para o proximo endereco de mem
+    ADD R0, R4                  ; vai para o proximo endereco de mem da base de dados
+    CMP R0, R5
+    JMP nextCartao
+
+aumentaSaldo:
     ADD R0, 4
     MOV R1, [R0]
     ADD R3, R1
     MOV [R0], R3
+    SUB R0, 4
+    JMP rotinaUsarCartao
 
 
 ;-------------------------------
@@ -1233,8 +1277,8 @@ RotinaErro:
 
     MOV R2, EcraErro
     CALL MostraDisplay
-CicloErro:
     CALL LimpaPerifericos
+CicloErro:
     MOV R0, PER_EN
     MOVB R1, [R0]
     CMP R1, 1
