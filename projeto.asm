@@ -634,6 +634,10 @@ NovoPEPE:
     MOV R3, TrocoAdevolver
     MOV R1, [R3]
     CALL converter
+    MOV R2, 00A5H
+    MOV R0, NumeroDePepes
+    MOV R1, [R0]
+    CALL PEPEeStock
 loopPEPE:
     MOV R0, PER_EN
     MOVB R1, [R0]
@@ -1160,6 +1164,16 @@ verStock:
     MOV R2, MenuStock1
     CALL MostraDisplay
     CALL LimpaPerifericos
+
+    MOV R2, 00B0H
+    MOV R0, QuantidadeNotas5
+    MOV R1, [R0]
+    CALL PEPEeStock
+
+    MOV R2, 00D0H
+    MOV R0, QuantidadeMoedas2
+    MOV R1, [R0]
+    CALL PEPEeStock
 loopVerStock:
     MOV R0, PER_EN
     MOVB R1, [R0]
@@ -1174,7 +1188,18 @@ loopVerStock:
 verStock2:
     MOV R2, MenuStock2
     CALL MostraDisplay
+
     CALL LimpaPerifericos
+    MOV R2, 00B0H
+    MOV R0, QuantidadeMoedas1
+    MOV R1, [R0]
+    CALL PEPEeStock
+
+    MOV R2, 00D0H
+    MOV R0, QuantidadeMoedas50
+    MOV R1, [R0]
+    CALL PEPEeStock
+
 loopVerStock2:
     MOV R0, PER_EN
     MOVB R1, [R0]
@@ -1190,6 +1215,17 @@ verStock3:
     MOV R2, MenuStock3
     CALL MostraDisplay
     CALL LimpaPerifericos
+
+    MOV R2, 00B0H
+    MOV R0, QuantidadeMoedas20
+    MOV R1, [R0]
+    CALL PEPEeStock
+
+    MOV R2, 00D0H
+    MOV R0, QuantidadeMoedas10
+    MOV R1, [R0]
+    CALL PEPEeStock
+
 loopVerStock3:
     MOV R0, PER_EN
     MOVB R1, [R0]
@@ -1197,10 +1233,12 @@ loopVerStock3:
     CMP R1, 0
     JEQ loopVerStock3
     CMP R1, 2
-    JEQ loopStock
+    JEQ loopStockIntermedio
     CALL RotinaErro
     JMP verStock3
 
+loopStockIntermedio:
+    JMP loopStock
 
 
 ;---------------------------------------------------------------
@@ -1391,23 +1429,48 @@ fimRotina:
     RET
 
 
-;------------------------------------------------------
-; Rotina para escrever no ecra o total que tem de pagar
-;------------------------------------------------------
-rotinaEscreveTotalPagar:
+;------------------------------------------
+; Rotina de conversao para ASCII no display
+;------------------------------------------
 
-    RET 
+PEPEeStock:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
 
+    MOV R0, 10          ; R1 = 10 para realizar as operacoes de divisao
+    ADD R2, 4           ; fica com o endereco do caracter a ser preenchido
+    MOV R3, 0           ; R3 = 0 numero de caracteres ja preenchidos
+    MOV R5, 48
+proximoCaracterPS:
+    MOV R4, R1          ; faz uma copia de R1 pra R4 (R4 = X)
+    MOD R4, R0          ; R4 = D = (resto) R4/R1 = (resto) X/10
+    DIV R1, R0          ; R1 = X = R1/R0 = X/10
+    ADD R4, R5          ; C = R4 = R4 + R5
+    MOVB [R2], R4       ; guarda o C no Display
+    ADD R3, 1           ; Atualiza o num de caracteres ja preenchidos
+    SUB R2, 1           ; Passa para o proximo espaco do display
+    CMP R1, 0           ; verifica se o X ja e zero
+    JNE proximoCaracterPS 
+cicloVaziosPS:
+    CMP R3, NumTotalCarater
+    JEQ fimRotina
+    MOV R6, 30H
+    MOVB [R2], R6
+    ADD R3, 1           ; Atualiza o num de caracteres ja preenchidos
+    SUB R2, 1           ; Passa para o proximo espaco do display
+    JMP cicloVaziosPS
 
-;---------------------------------------------------
-; Rotina para escrever no ecra o pepe que foi gerado 
-;---------------------------------------------------
-rotinaEscrevePepeGerado:
-    
-    
-    RET 
-
-;------------------
-; Rotina para escrever no ecra o troco a devolver 
-;
-
+fimRotinaPS:
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+    RET
